@@ -1,3 +1,44 @@
-svg{
-    background-color: antiquewhite;
+* {
+  font-family: 'Times New Roman', Times, serif;
+  font-size: 14px;
 }
+
+
+
+h1,h2{
+  font-size: 36px;
+  text-align: center;
+  font-weight: 300;
+  margin-top: 20px;
+  margin-bottom: 10px;
+
+}
+
+h2{
+  font-size: 24px;
+
+}
+
+svg{
+  margin-left: 50px;
+}
+
+
+.dot{
+  stroke:black;
+}
+
+div.tooltip {
+    position: absolute;
+    pointer-events: none;
+    background-color: #252525;
+    color: white;
+    padding: 12px;
+    border-radius: 5px;
+    border: solid 2px #161616;
+  }
+
+
+  p{
+text-align: right;
+margin-right: 25px;  }
