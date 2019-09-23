@@ -1,46 +1,59 @@
-import { select, json, scaleTime, max, min } from 'd3'
+import { select, json, scaleTime, scaleLinear, max, min, extent, axisBottom, scaleOrdinal, schemeCategory10, timeFormat, format, axisLeft } from 'd3'
 
 const svg = select('svg')
+const div = select('div')
+
 
 const width = +svg.attr('width')
 const height = +svg.attr('height')
 
 const render = dataArr => {
 
-    console.log(dataArr)
-
-    const title= "Doping in Professional Bicycle Racing"
-
-    const xValue = d => d.Year
-    const xAxisLabel = 'Year'
-
-    const parsedTime = dataArr.map((d) => d.Time.split(':'))
-    const yValue = parsedTime.map((d) => new Date(1000, 0, 1, 0, d[0], d[1]))
-    const yAxisLabel = 'Minutes'
-
-    const margin = {top: 100, right:20, bottom: 75, left: 100}
+    //Declaration of const------------
+    const margin = {top: 50, right:20, bottom: 75, left: 100}
     const innerWidth = width - margin.left - margin.right
     const innerHeight = height - margin.top - margin.bottom
-
-    const xScale = scaleTime()
-        .domain(max(xValue), min(xValue))
+    //
+    const color = scaleOrdinal(schemeCategory10)
+    //
+    const title= "Doping in Professional Bicycle Racing"
+    //DATA VALUES
+    const xValue = d => d.Year
+    const xAxisLabel = 'Year'
+    const yValue = dataArr.map(d => d.Time)
+    const yAxisLabel = 'Minutes'
+    //SCALES
+    const xScale = scaleLinear()
+        .domain([min(dataArr, d => d.Year -1 ), max(dataArr, d => d.Year +1)])
         .range([0, innerWidth])
-    
     const yScale = scaleTime()
-        .domain(min(yValue), max(yValue))
+        .domain(extent(dataArr, d => d.Time))
         .range([innerHeight, 0])
-
-    const g = svg.append('g')
-        .attr('transform', `translate(${margin.left}, ${margin.top})`)
-
+    //FORMATING
+    const tf = timeFormat("%M:%S")
+    const yAxis = axisLeft(yScale)
+        .tickFormat(tf)    
+    //AXIS
     const xAxis = axisBottom(xScale)
-        .ticks(10)
-        .tickPadding(10
-        )
+        .tickFormat(format("d"))
 
-    const xAxisG = g.append('g').call(xAxis)
-        .attr('id', 'x-axis')
-        .attr('transform', `translate(0, ${innerHeight})`) 
+    //Drawing of the graph-------------
+    //TOOLTIP
+    div
+        .attr('class', 'tooltip')
+        .attr('id', 'tooltip')
+        .style('opacity', 0)    
+    //GRAPH
+    svg
+    .attr("class", "graph")
+    .append('g')
+        .attr('transform', `translate(${margin.left}, ${margin.top})`)
+    //AXIS
+    const xAxisG = select('g')
+        .append('g')
+        .call(xAxis)
+            .attr('id', 'x-axis')
+            .attr('transform', `translate(0, ${innerHeight})`) 
 
     xAxisG.append('text')
         .attr('class', 'axis-label')
@@ -48,76 +61,83 @@ const render = dataArr => {
         .attr('x', innerWidth/2)
         .text(xAxisLabel)
         .attr('fill', 'black')
-/*
+        .style('font-size', '18px')
 
-    
-        
+    const yAxisG = select('g')
+        .append('g')
+        .call(yAxis)
+            .attr('id', 'y-axis')
 
-
-    const yAxisTickFormat = number =>
-    format('.1s')(number)
-        .replace('G', 'B')
-
-    const yAxisScale = scaleLinear()
-    .domain([0, max(dataArr,yValue)])
-    .range([innerHeight,0])
-    
-    const yAxis = axisLeft(yAxisScale)
-                .tickPadding(10)
-                .tickFormat(yAxisTickFormat)
-
-        
-    const yAxisG = g.append('g').call(yAxis)
-                    .attr('id', 'y-axis')
-                    .attr('transform', `translate(0, 0)`)
-                      
-        yAxisG.append('text')
+    yAxisG.append('text')
         .attr('class', 'axis-label')
-        .attr('y',  -60)
-        .attr('x',  - innerHeight/2)
         .attr('transform', 'rotate(-90)')
-        .attr('text-anchor', 'middle')
+        .attr('x', -150)
+        .attr('y', -60)
         .text(yAxisLabel)
         .attr('fill', 'black')
+        .style('font-size', '18px')
 
-
-    g.selectAll('rect')
+    //DATA
+    select('g').selectAll('.dot')
         .data(dataArr)
         .enter()
-        .append('rect')
-        .attr('x', d => xScale(xValue(d)))
-        .attr('y', d => innerHeight - yScale(yValue(d)) )
-        .attr('width', width/dataArr.length)
-        .attr('height',  d => yScale(yValue(d)))
+        .append('circle')
+        .attr('class', 'dot')
+        .attr('r',7)
+        .attr('cx', d => xScale(d.Year))
+        .attr('cy', d => yScale(d.Time))
         .attr('class', 'bar')
-        .attr('data-date', xValue)
-        .attr('data-gdp', yValue)
-        .append('title')
-            .attr('id', 'tooltip')
-            .html(d => 'Date : ' + xValue(d).toString().substring(0,15) + '<br/>' +' Value : '+ yValue(d) + '$')
+        .attr('data-xValue', xValue)
+        .attr('data-yValue', yValue)
+        .style('fill', d => color(d.Doping != ""))
+        .style("opacity", 0.7)
+        //HOVERING EVENT
+        .on("mouseover", function(d){
+            div.style("opacity", 1  )
+            div.style('fill', 'black')
+            div.attr('data-year', d.Year)
+            div.html(d.Name + ": " + d.Nationality + "<br/>"
+            + "Year: " +  d.Year + ", Time: " + timeFormat(d.Time) 
+            + (d.Doping?"<br/><br/>" + d.Doping:""))
+                .style('left', (event.pageX) + "px")
+                .style('top', (event.pageY - 28) + "px")
+        })
+        .on('mouseout', d => div.style('opacity', 0))
+    
+    //LEGEND
+    const legend = svg 
+        .selectAll('.legend')
+        .data(color.domain())
+        .enter().append('g')
+        .attr('class', 'legend')
+        .attr('id', 'legend')
+        
+    legend
+        .append('rect')
+            .attr('x', width-18)
+            .attr("y", function(d,i){ return height/2 - i*30})
+            .attr('width', 18)
+            .attr('height', 18)
+            .style('fill', color)
 
+    legend  
+        .append('text')
+            .attr('x', width-24)
+            .attr("y", function(d,i){ return height/2 - i*30 + 10})
+            .attr('font-size', '14px')
+            .attr('dy', '.35em')
+            .style('text-anchor', 'end')
+            .text(d => d? 'Riders with doping allegations':'No doping allegations')
 
-    svg.append('text')
-                .attr('id', 'title')
-                .attr('x', innerWidth /2 - 150)
-                .attr('y', 75)
-                .text(title);*/
 }
 
 json('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json')
   .then(data => {
       const dataArr = data
         dataArr.forEach((d) => {
-
-            d.Time = d.Time
-            d.Year = d.Year
-            /*d.Place
-            d.Seconds
-            d.Name
-          // d.Year = new Date(d.Year)
-            d.Nationality
-            d.Doping
-            d.URL*/
+            d.Year = +d.Year
+           const parsedTime = d.Time.split(':')
+           d.Time = new Date(1970, 0, 1, 0, parsedTime[0], parsedTime[1])
     });
     render(dataArr);
   });
