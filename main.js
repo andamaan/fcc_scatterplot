@@ -1,22 +1,23 @@
-import { select, json, scaleTime, scaleLinear, max, min, extent, axisBottom, scaleOrdinal, schemeCategory10, timeFormat, format, axisLeft } from 'd3'
+import { select, json, scaleTime, scaleLinear, max, min, extent, axisBottom, scaleOrdinal, schemeCategory10, timeFormat, format, axisLeft, event } from 'd3'
+
+const width = document.body.clientWidth
+const height = document.body.clientHeight - 150
 
 const svg = select('svg')
+    .attr('width', width)
+    .attr('height', height)
 const div = select('div')
 
-
-const width = +svg.attr('width')
-const height = +svg.attr('height')
+const toolTip = select('div')
 
 const render = dataArr => {
 
     //Declaration of const------------
-    const margin = {top: 50, right:20, bottom: 75, left: 100}
+    const margin = {top: 25, right:75, bottom: 75, left: 100}
     const innerWidth = width - margin.left - margin.right
     const innerHeight = height - margin.top - margin.bottom
     //
     const color = scaleOrdinal(schemeCategory10)
-    //
-    const title= "Doping in Professional Bicycle Racing"
     //DATA VALUES
     const xValue = d => d.Year
     const xAxisLabel = 'Year'
@@ -60,7 +61,7 @@ const render = dataArr => {
         .attr('y', 60)
         .attr('x', innerWidth/2)
         .text(xAxisLabel)
-        .attr('fill', 'black')
+        .attr('fill', 'white')
         .style('font-size', '18px')
 
     const yAxisG = select('g')
@@ -74,7 +75,7 @@ const render = dataArr => {
         .attr('x', -150)
         .attr('y', -60)
         .text(yAxisLabel)
-        .attr('fill', 'black')
+        .attr('fill', 'white')
         .style('font-size', '18px')
 
     //DATA
@@ -92,19 +93,26 @@ const render = dataArr => {
         .style('fill', d => color(d.Doping != ""))
         .style("opacity", 0.7)
         //HOVERING EVENT
-        .on("mouseover", function(d){
-            div.style("opacity", 1  )
-            div.style('fill', 'black')
-            div.attr('data-year', d.Year)
-            div.html(d.Name + ": " + d.Nationality + "<br/>"
-            + "Year: " +  d.Year + ", Time: " + timeFormat(d.Time) 
-            + (d.Doping?"<br/><br/>" + d.Doping:""))
-                .style('left', (event.pageX) + "px")
-                .style('top', (event.pageY - 28) + "px")
+        .on("mouseover", function(d) {
+            div.attr('data-name', d.Name)
+            div.attr('data-nationality', d.Nationality)
+            .html(d.Name + '(' + d.Nationality + ') ' 
+                + '<br/>' + 'Year: ' +  d.Year
+                + '<br/>' + 'Place: '+ d.Place + 'th' 
+                + (d.Doping? '<br/>' + `Doping: ${d.Doping} ` : '') 
+               
+                )
+            .style("left", (event.pageX) + "px")
+            .style("top", (event.pageY - 28) + "px")
+            .style("opacity", 1)
         })
-        .on('mouseout', d => div.style('opacity', 0))
+        .on("mouseout", function(d) {
+            div.style("opacity", 0);
+            });
+        
     
     //LEGEND
+
     const legend = svg 
         .selectAll('.legend')
         .data(color.domain())
@@ -112,27 +120,43 @@ const render = dataArr => {
         .attr('class', 'legend')
         .attr('id', 'legend')
         
+        const backgroundRect = legend.selectAll('rect')
+        .data([null])
+      backgroundRect.enter().append('rect')
+          .attr('id', 'legendBox')
+          .attr('x', width - 300)
+          .attr('y', height/2 - 30)
+          .attr('width', 210)
+          .attr('height', 75)
+          .attr('rx', 7)
+          .attr('fill', 'none')
+          .attr('stroke', 'white')
+
     legend
-        .append('rect')
-            .attr('x', width-18)
-            .attr("y", function(d,i){ return height/2 - i*30})
+        .append('circle')
+            .attr('r',7)
+            .attr('cx', width-115)
+            .attr("cy", function(d,i){ return height/2 +20 - i*30})
             .attr('width', 18)
             .attr('height', 18)
             .style('fill', color)
 
     legend  
         .append('text')
-            .attr('x', width-24)
-            .attr("y", function(d,i){ return height/2 - i*30 + 10})
+            .attr('id', 'text')
+            .attr('x', width-135)
+            .attr("y", function(d,i){ return height/2 +20 - i*30})
             .attr('font-size', '14px')
+            .attr('fill', 'white')
             .attr('dy', '.35em')
             .style('text-anchor', 'end')
-            .text(d => d? 'Riders with doping allegations':'No doping allegations')
+            .text(d => d? 'Doping allegations':'No doping allegations')
 
 }
 
 json('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/cyclist-data.json')
   .then(data => {
+      console.log(data)
       const dataArr = data
         dataArr.forEach((d) => {
             d.Year = +d.Year
